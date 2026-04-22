@@ -20,6 +20,18 @@
 
 ---
 
+## Утилиты и библиотеки
+
+```bash
+sys, os, serial, json, random, time, sqlite3, PIL, PySide6, datetime, PyQt5.QtWidgets, PyQt5.QtGui, PyQt5.QtCore
+```
+
 ---
+
+## Версия
+
+```bash
+Python 3.11+
+```
 
 ---
