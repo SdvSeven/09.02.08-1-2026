@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QPen, QIcon, QPixmap, QTransform
 from PyQt6.QtCore import Qt, QSize
 
-M        = r" "      # ← путь к медиа укажи здесь
+M        = r" "          # ← путь к медиа укажи здесь
 MAP_FILE = r" "          # ← путь к карте укажи здесь
 
 LOGO = f"{M}\\TLgreen.png"
