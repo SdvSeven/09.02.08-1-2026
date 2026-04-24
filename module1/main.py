@@ -16,7 +16,7 @@ CYCLES = {                                  # Циклы изменения ти
     IMG3: [IMG3, f"{M}\\Stop.png",       f"{M}\\Start.png"],
     IMG5: [IMG5, f"{M}\\TLred.png",      f"{M}\\TLgreen.png"],
 }
-CELL, COLS, ROWS = 36, 21, 21 # CELL - размер одной клетки в пикселях, COLS - количество столбцов, ROWS - количество строк
+CELL, COLS, ROWS = 36, 21, 21
 
 def get_px(path, rot=0):
     p = QPixmap(path)
@@ -27,6 +27,11 @@ class Grid(QWidget):
         super().__init__()
         self.setFixedSize(COLS * CELL, ROWS * CELL)
         self.side = side; self.roads, self.objs = {}, {}; self.mode = self.sel = None
+        self.setMouseTracking(True)
+
+    def mouseMoveEvent(self, e):
+        x, y = int(e.position().x()//CELL), int(e.position().y()//CELL)
+        self.setToolTip(f"x:{x} y:{y}" if 0<=x<COLS and 0<=y<ROWS else "")
 
     def paintEvent(self, _):
         p = QPainter(self); p.fillRect(self.rect(), QColor(235, 235, 235))
