@@ -1,4 +1,4 @@
-# ДЕМО-ВЕРСИЯ: работает: "режим по времени", "таблицы"
+# ДЕМО-ВЕРСИЯ: работает: "режим по времени", "таблицы", Label светофора
 import sys, json, os, sqlite3
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QPen, QIcon, QPixmap, QTransform
@@ -12,7 +12,7 @@ IMG1, IMG2, IMG3, IMG4, IMG5 = f"{M}\\Cbottom.png", f"{M}\\Pedestrain.png", f"{M
 RD1, RD2 = f"{M}\\Rvertical.png", f"{M}\\Rcrossroads.png"
 PLACE_IMGS = [IMG1, IMG2, IMG3, IMG4, IMG5]
 FREE   = {IMG2, IMG3}
-ROT    = {IMG1, IMG2, IMG4, IMG5, RD1, RD2}
+ROT    = {IMG1, IMG2, IMG4, IMG5}
 CYCLES = {
     IMG1: [IMG1, f"{M}\\BCvertical.png", f"{M}\\GCicon.ico"],
     IMG3: [IMG3, f"{M}\\Stop.png",       f"{M}\\Start.png"],
@@ -20,7 +20,10 @@ CYCLES = {
 }
 TL_CYCLE = [f"{M}\\TLred.png", f"{M}\\TLyellow.png", f"{M}\\TLgreen.png"]
 CELL, COLS, ROWS = 36, 21, 21
-AUTO_MODES = {"Старт/Стоп цикла", "Режим по времени", "Режим по транспорту", "Тест шаблон", "Тест рандом"}
+AUTO_MODES  = {"Старт/Стоп цикла", "Режим по времени", "Режим по транспорту", "Тест шаблон", "Тест рандом"}
+TL_MODE_MAP = {"Диагностика": "Сброс", "Восстановление": "Восстановление",
+               "Режим по времени": "По времени", "Режим по транспорту": "По транспорту",
+               "Тест шаблон": "Тест шаблон", "Тест рандом": "Тест рандом"}
 
 def init_db():
     con = sqlite3.connect(DB_FILE)
@@ -66,7 +69,7 @@ class Grid(QWidget):
             if c in self.roads or self.sel in FREE:
                 self.objs[c] = {"path": self.sel, "base": self.sel, "rot": 0, "speed": 0}
         else:
-            o = self.objs.get(c) or self.roads.get(c)
+            o = self.objs.get(c)
             if o: self.side.show_props(c, o, self)
         self.update()
 
@@ -87,11 +90,13 @@ class Side(QWidget):
         self.pvb.setContentsMargins(0,0,0,0); self.pvb.setSpacing(4)
         for w in (self.sp, self.props): w.hide(); vb.addWidget(w)
         vb.addStretch()
+        self.tl_lbl   = QLabel("Режим светофоров:\nСтандартный")
         self.mode_lbl = QLabel("Текущий режим:\nСтандартный")
-        self.mode_lbl.setWordWrap(True); self.mode_lbl.setStyleSheet("font-size:10px;color:#444;")
-        vb.addWidget(self.mode_lbl)
+        for l in (self.tl_lbl, self.mode_lbl):
+            l.setWordWrap(True); l.setStyleSheet("font-size:10px;color:#444;"); vb.addWidget(l)
 
     def set_mode(self, name):
+        self.tl_lbl.setText(f"Режим светофоров:\n{TL_MODE_MAP.get(name, 'Стандартный')}")
         self.mode_lbl.setText(f"Текущий режим:\n{'Автоматический' if name in AUTO_MODES else 'Стандартный'}")
 
     def _sec(self, paths):
