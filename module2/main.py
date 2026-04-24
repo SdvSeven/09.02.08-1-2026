@@ -1,11 +1,12 @@
-# ЧЕРНОВАЯ ВЕРСИЯ: реализован режим по времени
-import sys, json, os
+# ДЕМО-ВЕРСИЯ: работает: "режим по времени", "таблицы"
+import sys, json, os, sqlite3
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QPen, QIcon, QPixmap, QTransform
 from PyQt6.QtCore import Qt, QSize, QTimer
 
 M        = r"module1\media"
 MAP_FILE = r"map.json"
+DB_FILE  = r"traffic.db"
 LOGO     = f"{M}\\TLgreen.png"
 IMG1, IMG2, IMG3, IMG4, IMG5 = f"{M}\\Cbottom.png", f"{M}\\Pedestrain.png", f"{M}\\Block.png", f"{M}\\Zhorizontal.png", f"{M}\\TLyellow.png"
 RD1, RD2 = f"{M}\\Rvertical.png", f"{M}\\Rcrossroads.png"
@@ -19,6 +20,13 @@ CYCLES = {
 }
 TL_CYCLE = [f"{M}\\TLred.png", f"{M}\\TLyellow.png", f"{M}\\TLgreen.png"]
 CELL, COLS, ROWS = 36, 21, 21
+AUTO_MODES = {"Старт/Стоп цикла", "Режим по времени", "Режим по транспорту", "Тест шаблон", "Тест рандом"}
+
+def init_db():
+    con = sqlite3.connect(DB_FILE)
+    con.execute("CREATE TABLE IF NOT EXISTS Traffic_light (Id_light, Car_count_full_run, Car_average_in_minute, Count_color_switches)")
+    con.execute("CREATE TABLE IF NOT EXISTS Cars_stats (Car_id, Car_spawn_ticks, Car_exit_ticks)")
+    con.commit(); con.close()
 
 def get_px(path, rot=0):
     p = QPixmap(path)
@@ -40,21 +48,19 @@ class Grid(QWidget):
     def leaveEvent(self, _): self._tip.hide()
 
     def paintEvent(self, _):
-        p = QPainter(self)
-        p.fillRect(self.rect(), QColor(235, 235, 235))
+        p = QPainter(self); p.fillRect(self.rect(), QColor(235, 235, 235))
         for layer in (self.roads, self.objs):
             for (x, y), o in layer.items():
                 img = get_px(o["path"], o["rot"])
-                if not img.isNull():
-                    p.drawPixmap(x * CELL, y * CELL, CELL, CELL, img)
+                if not img.isNull(): p.drawPixmap(x*CELL, y*CELL, CELL, CELL, img)
         p.setPen(QPen(QColor(0, 0, 0, 50)))
-        for i in range(COLS + 1): p.drawLine(i * CELL, 0, i * CELL, ROWS * CELL)
-        for i in range(ROWS + 1): p.drawLine(0, i * CELL, COLS * CELL, i * CELL)
+        for i in range(COLS+1): p.drawLine(i*CELL, 0, i*CELL, ROWS*CELL)
+        for i in range(ROWS+1): p.drawLine(0, i*CELL, COLS*CELL, i*CELL)
 
     def mousePressEvent(self, e):
         if e.button() != Qt.MouseButton.LeftButton: return
-        x, y = int(e.position().x() // CELL), int(e.position().y() // CELL)
-        if not (0 <= x < COLS and 0 <= y < ROWS): return
+        x, y = int(e.position().x()//CELL), int(e.position().y()//CELL)
+        if not (0<=x<COLS and 0<=y<ROWS): return
         c = (x, y)
         if self.mode == 'place' and self.sel:
             if c in self.roads or self.sel in FREE:
@@ -67,34 +73,33 @@ class Grid(QWidget):
     def load(self, path):
         try:
             with open(path, encoding="utf-8") as f: data = json.load(f)
-            p = lambda d: {tuple(map(int, k.split(","))): v for k, v in d.items()}
-            self.roads, self.objs = p(data.get("roads", {})), p(data.get("objs", {}))
-            self.update()
+            p = lambda d: {tuple(map(int, k.split(","))): v for k,v in d.items()}
+            self.roads, self.objs = p(data.get("roads",{})), p(data.get("objs",{})); self.update()
         except Exception: pass
 
 class Side(QWidget):
     def __init__(self):
         super().__init__()
         self.setFixedWidth(120); self.grid = None; self.ibtns = []
-        vb = QVBoxLayout(self); vb.setContentsMargins(6, 6, 6, 6); vb.setSpacing(4)
+        vb = QVBoxLayout(self); vb.setContentsMargins(6,6,6,6); vb.setSpacing(4)
         self.sp = self._sec(PLACE_IMGS)
-        self.props = QWidget()
-        self.pvb = QVBoxLayout(self.props); self.pvb.setContentsMargins(0, 0, 0, 0); self.pvb.setSpacing(4)
+        self.props = QWidget(); self.pvb = QVBoxLayout(self.props)
+        self.pvb.setContentsMargins(0,0,0,0); self.pvb.setSpacing(4)
         for w in (self.sp, self.props): w.hide(); vb.addWidget(w)
         vb.addStretch()
-        self.mode_lbl = QLabel("Текущий режим:\n—")
-        self.mode_lbl.setWordWrap(True)
-        self.mode_lbl.setStyleSheet("font-size:10px;color:#444;")
+        self.mode_lbl = QLabel("Текущий режим:\nСтандартный")
+        self.mode_lbl.setWordWrap(True); self.mode_lbl.setStyleSheet("font-size:10px;color:#444;")
         vb.addWidget(self.mode_lbl)
 
-    def set_mode(self, t): self.mode_lbl.setText(f"Текущий режим:\n{t}")
+    def set_mode(self, name):
+        self.mode_lbl.setText(f"Текущий режим:\n{'Автоматический' if name in AUTO_MODES else 'Стандартный'}")
 
     def _sec(self, paths):
-        w = QWidget(); vb = QVBoxLayout(w); vb.setContentsMargins(0, 0, 0, 0)
+        w = QWidget(); vb = QVBoxLayout(w); vb.setContentsMargins(0,0,0,0)
         for p in paths:
-            b = QPushButton(); b.setFixedSize(100, 100); b.setCheckable(True); b.setProperty("path", p)
+            b = QPushButton(); b.setFixedSize(100,100); b.setCheckable(True); b.setProperty("path",p)
             ic = get_px(p)
-            if not ic.isNull(): b.setIcon(QIcon(ic)); b.setIconSize(QSize(88, 88))
+            if not ic.isNull(): b.setIcon(QIcon(ic)); b.setIconSize(QSize(88,88))
             else: b.setText(os.path.basename(p)[:8])
             b.clicked.connect(self._pick); vb.addWidget(b); self.ibtns.append(b)
         return w
@@ -114,28 +119,41 @@ class Side(QWidget):
         while self.pvb.count():
             w = self.pvb.takeAt(0).widget()
             if w: w.deleteLater()
-        self.props.show()
-        base = obj["base"]
+        self.props.show(); base = obj["base"]
         self.pvb.addWidget(QLabel(f"<b>{os.path.basename(base)}</b>"))
         if base in ROT:
             b = QPushButton("Повернуть")
-            b.clicked.connect(lambda: (obj.update(rot=(obj["rot"] + 90) % 360), grid.update()))
+            b.clicked.connect(lambda: (obj.update(rot=(obj["rot"]+90)%360), grid.update()))
             self.pvb.addWidget(b)
         if base in CYCLES:
             b = QPushButton("Изменить тип"); c = CYCLES[base]
             def color(_, o=obj, cy=c):
                 i = cy.index(o["path"]) if o["path"] in cy else 0
-                o["path"] = cy[(i + 1) % len(cy)]; grid.update()
+                o["path"] = cy[(i+1)%len(cy)]; grid.update()
             b.clicked.connect(color); self.pvb.addWidget(b)
         if base == IMG2:
-            lbl = QLabel(f"Скорость: {obj.get('speed', 0)} сек"); self.pvb.addWidget(lbl)
-            for txt, d in (("+1", 1), ("-1", -1)):
+            lbl = QLabel(f"Скорость: {obj.get('speed',0)} сек"); self.pvb.addWidget(lbl)
+            for txt, d in (("+1",1),("-1",-1)):
                 b = QPushButton(txt)
-                def spd(_, o=obj, dv=d, l=lbl): o["speed"] = o.get("speed", 0) + dv; l.setText(f"Скорость: {o['speed']} сек")
+                def spd(_, o=obj, dv=d, l=lbl): o["speed"]=o.get("speed",0)+dv; l.setText(f"Скорость: {o['speed']} сек")
                 b.clicked.connect(spd); self.pvb.addWidget(b)
         b = QPushButton("Удалить"); b.setStyleSheet("color:red;")
-        def dele(_, c=cell, g=grid): g.objs.pop(c, None); g.roads.pop(c, None); g.update(); self.props.hide()
+        def dele(_, c=cell, g=grid): g.objs.pop(c,None); g.roads.pop(c,None); g.update(); self.props.hide()
         b.clicked.connect(dele); self.pvb.addWidget(b)
+
+def show_tables():
+    dlg = QDialog(); dlg.setWindowTitle("Таблицы")
+    vb = QVBoxLayout(dlg)
+    con = sqlite3.connect(DB_FILE)
+    for name, cols in [("Traffic_light", ["Id_light","Car_count_full_run","Car_average_in_minute","Count_color_switches"]),
+                        ("Cars_stats",    ["Car_id","Car_spawn_ticks","Car_exit_ticks"])]:
+        vb.addWidget(QLabel(f"<b>{name}</b>"))
+        rows = con.execute(f"SELECT * FROM {name}").fetchall()
+        t = QTableWidget(len(rows), len(cols)); t.setHorizontalHeaderLabels(cols)
+        for r, row in enumerate(rows):
+            for c, val in enumerate(row): t.setItem(r, c, QTableWidgetItem(str(val)))
+        t.setFixedHeight(120); vb.addWidget(t)
+    con.close(); dlg.exec()
 
 class App(QMainWindow):
     def __init__(self):
@@ -144,22 +162,21 @@ class App(QMainWindow):
         lp = QPixmap(LOGO)
         if not lp.isNull(): self.setWindowIcon(QIcon(lp))
         self.side = Side(); self.grid = Grid(self.side); self.side.grid = self.grid
-
         self._tl_idx = 0
         self._tl_timer = QTimer(interval=5000, timeout=self._tl_tick)
 
         c = QWidget(); self.setCentralWidget(c)
-        root = QVBoxLayout(c); root.setContentsMargins(0, 0, 0, 0); root.setSpacing(0)
-        body = QHBoxLayout(); body.setContentsMargins(0, 0, 0, 0); body.setSpacing(0)
+        root = QVBoxLayout(c); root.setContentsMargins(0,0,0,0); root.setSpacing(0)
+        body = QHBoxLayout(); body.setContentsMargins(0,0,0,0); body.setSpacing(0)
         body.addWidget(self.side); body.addWidget(self.grid); root.addLayout(body)
 
-        bar1 = QHBoxLayout(); bar1.setContentsMargins(6, 6, 6, 2); bar1.setSpacing(6)
+        bar1 = QHBoxLayout(); bar1.setContentsMargins(6,6,6,2); bar1.setSpacing(6)
         self.bp = QPushButton("Добавить объекты"); self.bp.setCheckable(True); self.bp.setFixedHeight(32)
         self.bp.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.bp.toggled.connect(lambda v: (self.side.switch(place=v), self.side.set_mode("Добавить объекты" if v else "—")))
+        self.bp.toggled.connect(lambda v: (self.side.switch(place=v), self.side.set_mode("" if v else "")))
         bar1.addWidget(self.bp); root.addLayout(bar1)
 
-        bar2 = QHBoxLayout(); bar2.setContentsMargins(6, 2, 6, 6); bar2.setSpacing(6)
+        bar2 = QHBoxLayout(); bar2.setContentsMargins(6,2,6,6); bar2.setSpacing(6)
         for name, checkable, slot in [
             ("Диагностика",         False, lambda: self.side.set_mode("Диагностика")),
             ("Восстановление",      False, lambda: self.side.set_mode("Восстановление")),
@@ -168,7 +185,7 @@ class App(QMainWindow):
             ("Режим по транспорту", False, lambda: self.side.set_mode("Режим по транспорту")),
             ("Тест шаблон",         False, lambda: self.side.set_mode("Тест шаблон")),
             ("Тест рандом",         False, lambda: self.side.set_mode("Тест рандом")),
-            ("Таблицы",             False, lambda: self.side.set_mode("Таблицы")),
+            ("Таблицы",             False, lambda: (self.side.set_mode("Таблицы"), show_tables())),
         ]:
             b = QPushButton(name); b.setFixedHeight(32); b.setCheckable(checkable)
             b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -184,7 +201,7 @@ class App(QMainWindow):
             self._tl_timer.stop()
             for o in self.grid.objs.values():
                 if o["base"] == IMG5: o["path"] = IMG5
-            self.grid.update(); self.side.set_mode("—")
+            self.grid.update(); self.side.set_mode("")
 
     def _tl_tick(self):
         state = TL_CYCLE[self._tl_idx % 3]
@@ -193,6 +210,7 @@ class App(QMainWindow):
         self._tl_idx += 1; self.grid.update()
 
 if __name__ == "__main__":
+    init_db()
     app = QApplication(sys.argv)
     App().show()
     sys.exit(app.exec())
