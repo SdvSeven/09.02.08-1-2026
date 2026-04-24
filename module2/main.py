@@ -1,4 +1,4 @@
-# ЧЕРНОВИК ПРОГРАММЫ ДЛЯ МОДУЛЯ 2
+# ЧЕРНОВАЯ ВЕРСИЯ: реализован режим по времени
 import sys, json, os
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QPen, QIcon, QPixmap, QTransform
@@ -28,9 +28,16 @@ class Grid(QWidget):
     def __init__(self, side):
         super().__init__()
         self.setFixedSize(COLS * CELL, ROWS * CELL)
-        self.side = side
-        self.roads, self.objs = {}, {}
-        self.mode = self.sel = None
+        self.side = side; self.roads, self.objs = {}, {}; self.mode = self.sel = None
+        self.setMouseTracking(True)
+        self._tip = QLabel(self); self._tip.setStyleSheet("background:#555;color:#fff;padding:2px 4px;border-radius:3px;"); self._tip.hide()
+
+    def mouseMoveEvent(self, e):
+        x, y = int(e.position().x()//CELL), int(e.position().y()//CELL)
+        if 0<=x<COLS and 0<=y<ROWS: self._tip.setText(f"x:{x} y:{y}"); self._tip.adjustSize(); self._tip.move(int(e.position().x())+10, int(e.position().y())+14); self._tip.show()
+        else: self._tip.hide()
+
+    def leaveEvent(self, _): self._tip.hide()
 
     def paintEvent(self, _):
         p = QPainter(self)
@@ -115,8 +122,7 @@ class Side(QWidget):
             b.clicked.connect(lambda: (obj.update(rot=(obj["rot"] + 90) % 360), grid.update()))
             self.pvb.addWidget(b)
         if base in CYCLES:
-            b = QPushButton("Изменить тип")
-            c = CYCLES[base]
+            b = QPushButton("Изменить тип"); c = CYCLES[base]
             def color(_, o=obj, cy=c):
                 i = cy.index(o["path"]) if o["path"] in cy else 0
                 o["path"] = cy[(i + 1) % len(cy)]; grid.update()
