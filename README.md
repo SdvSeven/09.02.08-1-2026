@@ -20,6 +20,7 @@
 - Модуль 1 - [Код + Презентация + инструкция + media](https://github.com/SdvSeven/09.02.08-1-2026/tree/main/module1)
 - Модуль 2 - [Тестовая версия кода + media](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/tree/main/module2)
 - Методическе указание Модуль 1 - [Указания](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Методичка_Модуль1_PyQt6.docx)
+- Критерии оценки задания - [Схема оценки](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Схема%20Оценки.xlsx)
 
 ---
 
