@@ -24,7 +24,7 @@
 
 ---
 
-# Информация по модулям программы
+## Информация по модулям программы
 
 <p align="center">
   <img src="media/screen_module1.png", alt="Company Image" width="500"/>
