@@ -45,7 +45,7 @@
 pip install PyQt6
 ```
 
-> ⚠️ Путь к папке `media` задаётся в переменной `M` в начале `main.py`:
+> !!! Путь к папке `media` задаётся в переменной `M` в начале `main.py`:
 > ```python
 > M = r"module1\media"
 > ```
