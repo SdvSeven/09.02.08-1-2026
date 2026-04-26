@@ -19,7 +19,7 @@
 - Образец задания ДЭ - [Перейти к файлу](https://github.com/SdvSeven/09.02.08-1-2026/blob/main/Образец%20задания%20для%20ГИА%20ДЭ%20БУ%2009.docx)
 - Модуль 1 (Решение) - [Перейти к файлу](https://github.com/SdvSeven/09.02.08-1-2026/tree/main/module1)
 - Модуль 2 (В разработке*) - [Перейти к файлу](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/tree/main/module2)
-- Методическе указание "Модуль 1" - [Перейти к файлу](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Методичка_Модуль1_PyQt6.docx)
+- Методическе пособие "Модуль 1" - [Перейти к файлу]([https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Методичка_Модуль1_PyQt6.docx](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Методическое_пособие_Модуль1.docx))
 - Критерии оценки модулей - [Перейти к файлу](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Схема%20Оценки.xlsx)
 
 ---
