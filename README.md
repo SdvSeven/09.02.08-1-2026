@@ -1,3 +1,4 @@
+# РЕБЯТ Я В ОТПУСК ДО 4 МАЯ, ВСЕХ ОБНИМАЮ - я отдыхать :)
 # Intelligent Integrated Systems Technician (09.02.08-1-2026)
 
 <p align="center">
